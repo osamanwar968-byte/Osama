@@ -1,6 +1,6 @@
 # AI Telegram Bot
 
-A Python Telegram bot that forwards text messages to OpenAI and returns helpful replies with short-term per-chat memory.
+A Python Telegram bot that forwards text messages to Gemini and returns helpful replies with short-term per-chat memory.
 
 ## Run & Operate
 
@@ -11,7 +11,7 @@ A Python Telegram bot that forwards text messages to OpenAI and returns helpful 
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - Required env: `DATABASE_URL` — Postgres connection string
 - `python3 -m telegram_bot` — run the Telegram bot directly
-- Required secrets: `TELEGRAM_BOT_TOKEN`, `OPENAI_API_KEY`
+- Required secrets: `TELEGRAM_BOT_TOKEN`, `GEMINI_API_KEY`
 
 ## Stack
 
@@ -21,7 +21,7 @@ A Python Telegram bot that forwards text messages to OpenAI and returns helpful 
 - Validation: Zod (`zod/v4`), `drizzle-zod`
 - API codegen: Orval (from OpenAPI spec)
 - Build: esbuild (CJS bundle)
-- Bot: Python 3.11+ standard library, Telegram Bot API, OpenAI Chat Completions API
+- Bot: Python 3.11+, `google-generativeai`, `pyTelegramBotAPI`
 
 ## Where things live
 
@@ -34,7 +34,7 @@ A Python Telegram bot that forwards text messages to OpenAI and returns helpful 
 - The bot uses long polling instead of webhooks so it can run without a public callback URL.
 - The first version uses Python’s standard library for HTTP calls, keeping deployment lightweight.
 - Conversation history is deliberately in-memory and bounded; no user messages are persisted.
-- OpenAI and Telegram credentials are read only from environment secrets.
+- Gemini and Telegram credentials are read only from environment secrets.
 
 ## Product
 

@@ -16,6 +16,7 @@ __pycache__/
 venv/
 .pytest_cache/
 .ruff_cache/
+.pythonlibs/
 
 # IDEs and editors
 /.idea

@@ -1,19 +1,19 @@
 # AI Telegram Bot
 
-A small Python Telegram bot that sends text messages to OpenAI and returns the
-answer in Telegram. It uses long polling, so it works without a public webhook
-URL and is a good first version for a Replit deployment.
+A small Python Telegram bot that sends text messages to Gemini and returns the
+answer in Telegram through `pyTelegramBotAPI`. It uses long polling, so it works
+without a public webhook URL and is a good first version for a Replit deployment.
 
 ## Secure setup
 
 Add these as Replit Secrets. Do not put them in source files:
 
 - `TELEGRAM_BOT_TOKEN` — create a bot with [@BotFather](https://t.me/BotFather)
-- `OPENAI_API_KEY` — an OpenAI API key with access to the configured model
+- `GEMINI_API_KEY` — a Gemini API key from Google AI Studio
 
 Optional environment variables:
 
-- `OPENAI_MODEL` — defaults to `gpt-4o-mini`
+- `GEMINI_MODEL` — defaults to `gemini-2.5-flash`
 - `BOT_SYSTEM_PROMPT` — customize the assistant’s behavior
 - `LOG_LEVEL` — defaults to `INFO`
 
@@ -35,5 +35,5 @@ the workflow clears that memory; no message history is written to disk.
 ## Local run
 
 ```bash
-TELEGRAM_BOT_TOKEN=... OPENAI_API_KEY=... python3 -m telegram_bot
+TELEGRAM_BOT_TOKEN=... GEMINI_API_KEY=... python3 -m telegram_bot
 ```
