@@ -14,6 +14,7 @@ Add these as Replit Secrets. Do not put them in source files:
 Optional environment variables:
 
 - `GEMINI_MODEL` — defaults to `gemini-2.5-flash`
+- `GEMINI_IMAGE_MODEL` — defaults to `gemini-2.5-flash-image`
 - `BOT_SYSTEM_PROMPT` — customize the assistant’s behavior
 - `LOG_LEVEL` — defaults to `INFO`
 
@@ -28,6 +29,7 @@ python3 -m telegram_bot
 - `/start` begins the conversation
 - `/help` shows the available commands
 - `/reset` clears the current chat’s short-term memory
+- `/image <prompt>` generates an image from a text prompt
 
 The bot keeps the last six user/assistant turns per chat in memory. Restarting
 the workflow clears that memory; no message history is written to disk.

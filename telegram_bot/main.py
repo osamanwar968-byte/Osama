@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import io
 import logging
 import os
 import signal
@@ -14,6 +16,7 @@ import telebot
 
 
 MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+IMAGE_MODEL = os.getenv("GEMINI_IMAGE_MODEL", "gemini-2.5-flash-image")
 MAX_HISTORY_MESSAGES = 12
 MAX_TELEGRAM_MESSAGE_LENGTH = 4096
 SYSTEM_PROMPT = os.getenv(
@@ -95,6 +98,27 @@ class GeminiAssistant:
         return answer.strip()
 
 
+class GeminiImageGenerator:
+    """Generate an image using Gemini's native image output."""
+
+    def __init__(self, api_key: str) -> None:
+        genai.configure(api_key=api_key)
+        self.model = genai.GenerativeModel(model_name=IMAGE_MODEL)
+
+    def generate(self, prompt: str) -> tuple[bytes, str]:
+        response = self.model.generate_content(prompt)
+        for part in response.parts:
+            inline_data = getattr(part, "inline_data", None)
+            if inline_data is None:
+                continue
+            data = inline_data.data
+            if isinstance(data, str):
+                data = base64.b64decode(data)
+            if isinstance(data, bytes):
+                return data, getattr(inline_data, "mime_type", "image/png")
+        raise RuntimeError("Gemini did not return an image.")
+
+
 def split_message(text: str) -> list[str]:
     """Split a response without exceeding Telegram's message limit."""
     remaining = text.strip() or "I wasn't able to generate a response."
@@ -115,9 +139,15 @@ def split_message(text: str) -> list[str]:
 class TelegramBot:
     """Telegram handlers and the chat-memory boundary."""
 
-    def __init__(self, token: str, assistant: GeminiAssistant) -> None:
+    def __init__(
+        self,
+        token: str,
+        assistant: GeminiAssistant,
+        image_generator: GeminiImageGenerator,
+    ) -> None:
         self.bot = telebot.TeleBot(token, parse_mode=None)
         self.assistant = assistant
+        self.image_generator = image_generator
         self.store = ConversationStore()
         self.register_handlers()
 
@@ -141,8 +171,45 @@ class TelegramBot:
                     "Available commands:\n"
                     "/start — start chatting\n"
                     "/reset — clear this chat’s short-term memory\n"
+                    "/image <prompt> — generate an image\n"
                     "/help — show this help"
                 ),
+            )
+
+        @self.bot.message_handler(commands=["image"])
+        def image_command(message: telebot.types.Message) -> None:
+            parts = (message.text or "").split(maxsplit=1)
+            if len(parts) < 2 or not parts[1].strip():
+                self.send(
+                    message.chat.id,
+                    "Usage: /image <what you want to create>",
+                )
+                return
+
+            prompt = parts[1].strip()
+            self.bot.send_chat_action(message.chat.id, "upload_photo")
+            try:
+                image_data, mime_type = self.image_generator.generate(prompt)
+            except Exception:
+                logger.exception(
+                    "Gemini image generation failed for chat %s",
+                    message.chat.id,
+                )
+                self.send(
+                    message.chat.id,
+                    (
+                        "I couldn't generate that image right now. "
+                        "Please try a different prompt."
+                    ),
+                )
+                return
+
+            image = io.BytesIO(image_data)
+            image.name = "generated.png" if mime_type == "image/png" else "generated.jpg"
+            self.bot.send_photo(
+                message.chat.id,
+                image,
+                caption=f"Generated from: {prompt[:900]}",
             )
 
         @self.bot.message_handler(commands=["reset"])
@@ -205,7 +272,11 @@ class TelegramBot:
 def run() -> None:
     token = required_env("TELEGRAM_BOT_TOKEN")
     gemini_key = required_env("GEMINI_API_KEY")
-    application = TelegramBot(token, GeminiAssistant(gemini_key))
+    application = TelegramBot(
+        token,
+        GeminiAssistant(gemini_key),
+        GeminiImageGenerator(gemini_key),
+    )
 
     def stop_handler(signum: int, _frame: Any) -> None:
         logger.info("Received signal %s; stopping the bot.", signum)

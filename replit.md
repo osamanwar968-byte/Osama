@@ -39,6 +39,7 @@ A Python Telegram bot that forwards text messages to Gemini and returns helpful 
 ## Product
 
 - Users can chat with an AI assistant from Telegram.
+- Users can generate images with `/image <prompt>` using Gemini.
 - `/start`, `/help`, and `/reset` provide a simple command surface.
 - Long replies are split into Telegram-safe message sizes.
 
