@@ -39,8 +39,9 @@ A Python Telegram bot that forwards text messages to Gemini and returns helpful 
 ## Product
 
 - Users can chat with an AI assistant from Telegram.
-- Users can generate images with `/image <prompt>` using Gemini.
+- Users can generate images with `/image <prompt>` using Pollinations AI.
 - `/start`, `/help`, and `/reset` provide a simple command surface.
+- Bot-facing responses and errors default to Arabic.
 - Long replies are split into Telegram-safe message sizes.
 
 ## User preferences

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import base64
 import io
 import logging
 import os
@@ -10,21 +9,23 @@ import signal
 import sys
 from dataclasses import dataclass, field
 from typing import Any
+from urllib import error, parse, request
 
 import google.generativeai as genai
 import telebot
 
 
 MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
-IMAGE_MODEL = os.getenv("GEMINI_IMAGE_MODEL", "gemini-2.5-flash-image")
+POLLINATIONS_IMAGE_URL = "https://image.pollinations.ai/prompt/"
 MAX_HISTORY_MESSAGES = 12
 MAX_TELEGRAM_MESSAGE_LENGTH = 4096
 SYSTEM_PROMPT = os.getenv(
     "BOT_SYSTEM_PROMPT",
     (
-        "You are a helpful AI assistant inside Telegram. "
-        "Answer clearly and concisely. Use plain text that reads well on a phone. "
-        "If you are unsure, say so instead of inventing facts."
+        "أنت مساعد ذكاء اصطناعي مفيد داخل تيليجرام. "
+        "أجب باللغة العربية فقط وبأسلوب واضح ومختصر يناسب الهاتف. "
+        "لا تستخدم أي لغة أخرى إلا إذا طلب المستخدم ذلك صراحة. "
+        "إذا لم تكن متأكدًا، فاذكر ذلك بدلًا من اختلاق المعلومات."
     ),
 )
 
@@ -43,12 +44,12 @@ def required_env(name: str) -> str:
     value = os.getenv(name, "").strip()
     if not value:
         raise ConfigurationError(
-            f"Missing {name}. Add it as a Replit Secret before starting the bot."
+            f"الإعداد {name} مفقود. أضفه كسرّ في Replit قبل تشغيل البوت."
         )
     if name == "TELEGRAM_BOT_TOKEN" and any(character.isspace() for character in value):
         raise ConfigurationError(
-            "TELEGRAM_BOT_TOKEN contains whitespace. "
-            "Enter the token exactly as provided by BotFather."
+            "يحتوي TELEGRAM_BOT_TOKEN على مسافات. "
+            "أدخل الرمز كما أرسله BotFather تمامًا."
         )
     return value
 
@@ -94,29 +95,32 @@ class GeminiAssistant:
         )
         answer = getattr(response, "text", "")
         if not isinstance(answer, str) or not answer.strip():
-            raise RuntimeError("Gemini returned an empty response.")
+            raise RuntimeError("أعاد Gemini ردًا فارغًا.")
         return answer.strip()
 
 
-class GeminiImageGenerator:
-    """Generate an image using Gemini's native image output."""
+def fetch_pollinations_image(prompt: str) -> tuple[bytes, str]:
+    """Fetch a generated image from Pollinations AI."""
+    url = f"{POLLINATIONS_IMAGE_URL}{parse.quote(prompt, safe='')}"
+    image_request = request.Request(
+        url,
+        headers={"User-Agent": "ai-telegram-bot/1.0"},
+        method="GET",
+    )
+    try:
+        with request.urlopen(image_request, timeout=90) as response:
+            image_data = response.read()
+            mime_type = response.headers.get_content_type()
+    except error.HTTPError as exc:
+        raise RuntimeError(f"رفض Pollinations الطلب برمز HTTP {exc.code}.") from exc
+    except error.URLError as exc:
+        raise RuntimeError("تعذر الوصول إلى خدمة Pollinations.") from exc
+    except TimeoutError as exc:
+        raise RuntimeError("انتهت مهلة توليد الصورة.") from exc
 
-    def __init__(self, api_key: str) -> None:
-        genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel(model_name=IMAGE_MODEL)
-
-    def generate(self, prompt: str) -> tuple[bytes, str]:
-        response = self.model.generate_content(prompt)
-        for part in response.parts:
-            inline_data = getattr(part, "inline_data", None)
-            if inline_data is None:
-                continue
-            data = inline_data.data
-            if isinstance(data, str):
-                data = base64.b64decode(data)
-            if isinstance(data, bytes):
-                return data, getattr(inline_data, "mime_type", "image/png")
-        raise RuntimeError("Gemini did not return an image.")
+    if not mime_type.startswith("image/") or not image_data:
+        raise RuntimeError("لم تُرجع Pollinations صورة صالحة.")
+    return image_data, mime_type
 
 
 def split_message(text: str) -> list[str]:
@@ -143,11 +147,9 @@ class TelegramBot:
         self,
         token: str,
         assistant: GeminiAssistant,
-        image_generator: GeminiImageGenerator,
     ) -> None:
         self.bot = telebot.TeleBot(token, parse_mode=None)
         self.assistant = assistant
-        self.image_generator = image_generator
         self.store = ConversationStore()
         self.register_handlers()
 
@@ -157,9 +159,9 @@ class TelegramBot:
             self.send(
                 message.chat.id,
                 (
-                    "Hi. I’m your AI assistant.\n\n"
-                    "Send me a message and I’ll help you think it through. "
-                    "Use /reset to clear this chat’s short-term memory."
+                    "مرحبًا، أنا مساعدك الذكي.\n\n"
+                    "أرسل لي رسالة وسأساعدك في التفكير فيها. "
+                    "استخدم /reset لمسح ذاكرة هذه المحادثة المؤقتة."
                 ),
             )
 
@@ -168,11 +170,11 @@ class TelegramBot:
             self.send(
                 message.chat.id,
                 (
-                    "Available commands:\n"
-                    "/start — start chatting\n"
-                    "/reset — clear this chat’s short-term memory\n"
-                    "/image <prompt> — generate an image\n"
-                    "/help — show this help"
+                    "الأوامر المتاحة:\n"
+                    "/start — بدء المحادثة\n"
+                    "/reset — مسح ذاكرة المحادثة المؤقتة\n"
+                    "/image <الوصف> — إنشاء صورة\n"
+                    "/help — عرض هذه المساعدة"
                 ),
             )
 
@@ -182,24 +184,24 @@ class TelegramBot:
             if len(parts) < 2 or not parts[1].strip():
                 self.send(
                     message.chat.id,
-                    "Usage: /image <what you want to create>",
+                    "الاستخدام: /image <وصف الصورة التي تريد إنشاءها>",
                 )
                 return
 
             prompt = parts[1].strip()
             self.bot.send_chat_action(message.chat.id, "upload_photo")
             try:
-                image_data, mime_type = self.image_generator.generate(prompt)
+                image_data, mime_type = fetch_pollinations_image(prompt)
             except Exception:
                 logger.exception(
-                    "Gemini image generation failed for chat %s",
+                    "فشل توليد الصورة للمحادثة %s",
                     message.chat.id,
                 )
                 self.send(
                     message.chat.id,
                     (
-                        "I couldn't generate that image right now. "
-                        "Please try a different prompt."
+                        "تعذر إنشاء الصورة الآن. "
+                        "حاول استخدام وصف مختلف بعد قليل."
                     ),
                 )
                 return
@@ -209,13 +211,13 @@ class TelegramBot:
             self.bot.send_photo(
                 message.chat.id,
                 image,
-                caption=f"Generated from: {prompt[:900]}",
+                caption=f"تم إنشاء الصورة من: {prompt[:900]}",
             )
 
         @self.bot.message_handler(commands=["reset"])
         def reset(message: telebot.types.Message) -> None:
             self.store.reset(message.chat.id)
-            self.send(message.chat.id, "Done. I cleared our conversation memory.")
+            self.send(message.chat.id, "تم مسح ذاكرة المحادثة المؤقتة.")
 
         @self.bot.message_handler(content_types=["text"])
         def text_message(message: telebot.types.Message) -> None:
@@ -229,13 +231,13 @@ class TelegramBot:
                     self.store.for_gemini(message.chat.id)
                 )
             except Exception:
-                logger.exception("Gemini response failed for chat %s", message.chat.id)
+                logger.exception("فشل رد Gemini للمحادثة %s", message.chat.id)
                 self.store.conversations[message.chat.id].pop()
                 self.send(
                     message.chat.id,
                     (
-                        "I hit a temporary problem while thinking. "
-                        "Please try again in a moment."
+                        "حدثت مشكلة مؤقتة أثناء التفكير. "
+                        "حاول مرة أخرى بعد قليل."
                     ),
                 )
                 return
@@ -246,7 +248,7 @@ class TelegramBot:
             content_types=["audio", "document", "photo", "sticker", "video", "voice"]
         )
         def unsupported_message(message: telebot.types.Message) -> None:
-            self.send(message.chat.id, "I can respond to text messages for now.")
+            self.send(message.chat.id, "أستطيع الرد على الرسائل النصية والصور المنشأة حاليًا.")
 
     def send(self, chat_id: int, text: str) -> None:
         for chunk in split_message(text):
@@ -255,7 +257,7 @@ class TelegramBot:
     def run(self) -> None:
         bot_info = self.bot.get_me()
         logger.info(
-            "AI Telegram bot started as @%s using %s",
+            "بدأ بوت تيليجرام الذكي باسم @%s باستخدام %s",
             getattr(bot_info, "username", "unknown"),
             MODEL,
         )
@@ -275,11 +277,10 @@ def run() -> None:
     application = TelegramBot(
         token,
         GeminiAssistant(gemini_key),
-        GeminiImageGenerator(gemini_key),
     )
 
     def stop_handler(signum: int, _frame: Any) -> None:
-        logger.info("Received signal %s; stopping the bot.", signum)
+        logger.info("تم استلام الإشارة %s؛ جارٍ إيقاف البوت.", signum)
         application.stop()
 
     signal.signal(signal.SIGTERM, stop_handler)
