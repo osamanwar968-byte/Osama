@@ -1,6 +1,6 @@
-# [Project name]
+# AI Telegram Bot
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A Python Telegram bot that forwards text messages to OpenAI and returns helpful replies with short-term per-chat memory.
 
 ## Run & Operate
 
@@ -10,6 +10,8 @@ _Replace the heading above with the project's name, and this line with one sente
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - Required env: `DATABASE_URL` — Postgres connection string
+- `python3 -m telegram_bot` — run the Telegram bot directly
+- Required secrets: `TELEGRAM_BOT_TOKEN`, `OPENAI_API_KEY`
 
 ## Stack
 
@@ -19,26 +21,35 @@ _Replace the heading above with the project's name, and this line with one sente
 - Validation: Zod (`zod/v4`), `drizzle-zod`
 - API codegen: Orval (from OpenAPI spec)
 - Build: esbuild (CJS bundle)
+- Bot: Python 3.11+ standard library, Telegram Bot API, OpenAI Chat Completions API
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `telegram_bot/main.py` — polling loop, Telegram commands, bounded memory, and AI calls
+- `telegram_bot/README.md` — secret setup and usage guide
+- `pyproject.toml` — Python project metadata
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- The bot uses long polling instead of webhooks so it can run without a public callback URL.
+- The first version uses Python’s standard library for HTTP calls, keeping deployment lightweight.
+- Conversation history is deliberately in-memory and bounded; no user messages are persisted.
+- OpenAI and Telegram credentials are read only from environment secrets.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- Users can chat with an AI assistant from Telegram.
+- `/start`, `/help`, and `/reset` provide a simple command surface.
+- Long replies are split into Telegram-safe message sizes.
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+No additional preferences recorded.
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Add both secrets before starting the bot workflow; startup exits clearly if either is missing.
+- Polling memory is lost when the workflow restarts.
 
 ## Pointers
 
