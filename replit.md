@@ -10,7 +10,8 @@ A Python Telegram bot that forwards text messages to Gemini and returns helpful 
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - Required env: `DATABASE_URL` — Postgres connection string
-- `python3 -m telegram_bot` — run the Telegram bot directly
+- `python3 -m telegram_bot.web` — run the Flask web interface and Telegram bot
+  together (port 8000 locally)
 - Required secrets: `TELEGRAM_BOT_TOKEN`, `GEMINI_API_KEY`
 
 ## Stack
@@ -21,11 +22,14 @@ A Python Telegram bot that forwards text messages to Gemini and returns helpful 
 - Validation: Zod (`zod/v4`), `drizzle-zod`
 - API codegen: Orval (from OpenAPI spec)
 - Build: esbuild (CJS bundle)
-- Bot: Python 3.11+, `google-generativeai`, `pyTelegramBotAPI`
+- Bot: Python 3.11+, `google-generativeai`, `pyTelegramBotAPI`, Flask
 
 ## Where things live
 
 - `telegram_bot/main.py` — polling loop, Telegram commands, bounded memory, and AI calls
+- `telegram_bot/web.py` — Flask routes and the background Telegram bot runner
+- `telegram_bot/templates/index.html` — Arabic RTL web interface
+- `telegram_bot/static/` — responsive interface styles and browser behavior
 - `telegram_bot/README.md` — secret setup and usage guide
 - `pyproject.toml` — Python project metadata
 

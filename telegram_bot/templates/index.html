@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="مساعد ذكي عربي للدردشة وإنشاء الصور"
+    />
+    <title>مساعدي الذكي</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  </head>
+  <body>
+    <div class="ambient ambient-one"></div>
+    <div class="ambient ambient-two"></div>
+
+    <main class="page-shell">
+      <header class="topbar">
+        <a class="brand" href="/" aria-label="الصفحة الرئيسية">
+          <span class="brand-mark">م</span>
+          <span>
+            <strong>مساعدي الذكي</strong>
+            <small>ذكاء اصطناعي باللغة العربية</small>
+          </span>
+        </a>
+        <div class="status-pill">
+          <span class="status-dot"></span>
+          متصل الآن
+        </div>
+      </header>
+
+      <section class="intro">
+        <div>
+          <p class="eyebrow">مساحتك الذكية</p>
+          <h1>فكرة واضحة تبدأ<br /><span>من رسالة واحدة.</span></h1>
+          <p class="intro-copy">
+            تحدث مع مساعدك بالعربية أو حوّل وصفك إلى صورة جديدة خلال لحظات.
+          </p>
+        </div>
+        <div class="intro-note">
+          <span class="sparkle">✦</span>
+          <p>اكتب بطريقتك<br /><strong>وسأفهمك.</strong></p>
+        </div>
+      </section>
+
+      <section class="workspace-grid" aria-label="أدوات المساعد">
+        <article class="panel chat-panel">
+          <div class="panel-heading">
+            <div class="panel-icon chat-icon">⌁</div>
+            <div>
+              <h2>الدردشة الذكية</h2>
+              <p>اسأل، خطط، أو ناقش أي فكرة</p>
+            </div>
+            <span class="panel-label">Gemini</span>
+          </div>
+
+          <div class="messages" id="chatMessages" aria-live="polite">
+            <div class="message assistant-message">
+              <div class="message-avatar">م</div>
+              <div class="message-bubble">
+                <p>
+                  أهلًا بك. أنا جاهز لمساعدتك — ما الذي تريد أن نبدأ به؟
+                </p>
+                <time>الآن</time>
+              </div>
+            </div>
+          </div>
+
+          <form class="chat-form" id="chatForm">
+            <label class="sr-only" for="chatInput">اكتب رسالتك</label>
+            <input
+              id="chatInput"
+              name="message"
+              type="text"
+              autocomplete="off"
+              placeholder="اكتب رسالتك هنا..."
+              maxlength="4000"
+              required
+            />
+            <button class="send-button" type="submit" aria-label="إرسال">
+              <span>إرسال</span>
+              <span class="send-arrow">←</span>
+            </button>
+          </form>
+          <p class="form-hint">اضغط Enter للإرسال</p>
+        </article>
+
+        <article class="panel image-panel">
+          <div class="panel-heading">
+            <div class="panel-icon image-icon">✦</div>
+            <div>
+              <h2>استوديو الصور</h2>
+              <p>حوّل الوصف إلى صورة</p>
+            </div>
+            <span class="panel-label">Pollinations</span>
+          </div>
+
+          <div class="image-preview" id="imagePreview">
+            <div class="image-placeholder">
+              <div class="placeholder-orbit">
+                <span></span><span></span><span></span>
+              </div>
+              <strong>صورتك القادمة تبدأ هنا</strong>
+              <p>اكتب وصفًا دقيقًا، ودع الخيال يكمل الباقي.</p>
+            </div>
+          </div>
+
+          <form class="image-form" id="imageForm">
+            <label class="sr-only" for="imagePrompt">وصف الصورة</label>
+            <textarea
+              id="imagePrompt"
+              name="prompt"
+              rows="3"
+              maxlength="1000"
+              placeholder="مثال: مقهى عربي هادئ في شارع قديم وقت الغروب..."
+              required
+            ></textarea>
+            <button class="image-button" type="submit">
+              <span class="button-icon">✦</span>
+              <span>إنشاء الصورة</span>
+            </button>
+          </form>
+        </article>
+      </section>
+
+      <footer class="footer">
+        <span>مساعد عربي للدردشة والإبداع</span>
+        <span class="footer-line"></span>
+        <span>مدعوم بالذكاء الاصطناعي</span>
+      </footer>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+  </body>
+</html>

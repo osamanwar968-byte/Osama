@@ -13,15 +13,18 @@ Add these as Replit Secrets. Do not put them in source files:
 
 Optional environment variables:
 
-- `GEMINI_MODEL` — defaults to `gemini-2.5-flash`
+- `GEMINI_MODEL` — defaults to `gemini-3.8-flash`
 - `BOT_SYSTEM_PROMPT` — customize the assistant’s behavior; the default is Arabic
 - `LOG_LEVEL` — defaults to `INFO`
 
 The bot workflow runs with:
 
 ```bash
-python3 -m telegram_bot
+python3 -m telegram_bot.web
 ```
+
+The browser interface is served on the workflow `PORT` (8000 locally). It
+starts the Telegram polling bot in the background in the same process.
 
 ## Commands
 

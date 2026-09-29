@@ -15,7 +15,7 @@ import google.generativeai as genai
 import telebot
 
 
-MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
 POLLINATIONS_IMAGE_URL = "https://image.pollinations.ai/prompt/"
 MAX_HISTORY_MESSAGES = 12
 MAX_TELEGRAM_MESSAGE_LENGTH = 4096
@@ -38,6 +38,15 @@ logger = logging.getLogger("telegram_bot")
 
 class ConfigurationError(RuntimeError):
     """Raised when a required secret is missing."""
+
+
+class GeminiQuotaError(RuntimeError):
+    """Raised when Gemini rejects a request because its quota is exhausted."""
+
+
+def is_gemini_quota_error(exc: Exception) -> bool:
+    details = str(exc).lower()
+    return "resource_exhausted" in details or "quota" in details
 
 
 def required_env(name: str) -> str:
@@ -89,10 +98,17 @@ class GeminiAssistant:
         )
 
     def reply(self, history: list[dict[str, Any]]) -> str:
-        response = self.model.generate_content(
-            history,
-            generation_config={"max_output_tokens": 700},
-        )
+        try:
+            response = self.model.generate_content(
+                history,
+                generation_config={"max_output_tokens": 700},
+            )
+        except Exception as exc:
+            if is_gemini_quota_error(exc):
+                raise GeminiQuotaError(
+                    "تم بلوغ حد استخدام Gemini الحالي."
+                ) from exc
+            raise
         answer = getattr(response, "text", "")
         if not isinstance(answer, str) or not answer.strip():
             raise RuntimeError("أعاد Gemini ردًا فارغًا.")
@@ -230,6 +246,17 @@ class TelegramBot:
                 answer = self.assistant.reply(
                     self.store.for_gemini(message.chat.id)
                 )
+            except GeminiQuotaError:
+                logger.warning("تم بلوغ حصة Gemini للمحادثة %s", message.chat.id)
+                self.store.conversations[message.chat.id].pop()
+                self.send(
+                    message.chat.id,
+                    (
+                        "تم الوصول إلى حد استخدام Gemini المجاني حاليًا. "
+                        "حاول مرة أخرى لاحقًا."
+                    ),
+                )
+                return
             except Exception:
                 logger.exception("فشل رد Gemini للمحادثة %s", message.chat.id)
                 self.store.conversations[message.chat.id].pop()

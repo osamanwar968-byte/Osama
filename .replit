@@ -24,12 +24,13 @@ args = "AI Telegram Bot"
 name = "AI Telegram Bot"
 author = "agent"
 
+[workflows.workflow.metadata]
+outputType = "webview"
+
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python3 -m telegram_bot"
-
-[workflows.workflow.metadata]
-outputType = "console"
+args = "python3 -m telegram_bot.web"
+waitForPort = 8000
 
 [agent]
 stack = "PNPM_WORKSPACE"
